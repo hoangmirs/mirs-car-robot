@@ -36,8 +36,8 @@ const int Bottom_Left = 129; // 左下移动
 const int Top_Right = 72;    // 右上移动
 const int Bottom_Right = 34; // 右下移动
 const int Stop = 0;          // 停止
-// const int Contrarotate  = 172;                              // 逆时针旋转
-const int Clockwise = 83;   // 顺时针旋转
+const int Clockwise = 83;    // 顺时针旋转
+const int Contrarotate = 172; // 逆时针旋转
 const int Moedl1 = 25;      // 模式1
 const int Moedl2 = 26;      // 模式2
 const int Moedl3 = 27;      // 模式3
@@ -838,42 +838,47 @@ static esp_err_t index_handler(httpd_req_t *req)
   // page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('rightdown') onmouseup=getsend('stop') ontouchstart=getsend('rightdown') ontouchend=getsend('stop') ><b>RightDown</b></button>";
   // page += "</p>";
   page += "<p align=center>";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('leftup') onmouseup=getsend('stop') ontouchstart=getsend('leftup') ontouchend=getsend('stop')><b>LeftUp</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('go') onmouseup=getsend('stop') ontouchstart=getsend('go') ontouchend=getsend('stop') ><b>Forward</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('leftup') onmouseup=getsend('stop') ontouchstart=getsend('leftup') ontouchend=getsend('stop')><b>LeftUp</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('go') onmouseup=getsend('stop') ontouchstart=getsend('go') ontouchend=getsend('stop') ><b>Forward</b></button>&nbsp;";
   page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('rightup') onmouseup=getsend('stop') ontouchstart=getsend('rightup') ontouchend=getsend('stop') ><b>RightUp</b></button>";
   page += "</p>";
 
   page += "<p align=center>";
   page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('left') onmouseup=getsend('stop') ontouchstart=getsend('left') ontouchend=getsend('stop')><b>Left</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('clockwise') onmouseup=getsend('stop') ontouchstart=getsend('clockwise') ontouchend=getsend('stop')><b>Clockwise</b></button>&nbsp;";
+  page += "<button style=background-color:indianred;width:100px;height:40px; onmousedown=getsend('stop') onmouseup=getsend('stop')><b>Stop</b></button>&nbsp;";
   page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('right') onmouseup=getsend('stop') ontouchstart=getsend('right') ontouchend=getsend('stop')><b>Right</b></button>";
   page += "</p>";
 
   page += "<p align=center>";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('leftdown') onmouseup=getsend('stop') ontouchstart=getsend('leftdown') ontouchend=getsend('stop') ><b>LeftDown</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('back') onmouseup=getsend('stop') ontouchstart=getsend('back') ontouchend=getsend('stop') ><b>Backward</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:90px;height:40px onmousedown=getsend('rightdown') onmouseup=getsend('stop') ontouchstart=getsend('rightdown') ontouchend=getsend('stop') ><b>RightDown</b></button>";
+  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('leftdown') onmouseup=getsend('stop') ontouchstart=getsend('leftdown') ontouchend=getsend('stop') ><b>LeftDown</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('back') onmouseup=getsend('stop') ontouchstart=getsend('back') ontouchend=getsend('stop') ><b>Backward</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:90px;height:40px; onmousedown=getsend('rightdown') onmouseup=getsend('stop') ontouchstart=getsend('rightdown') ontouchend=getsend('stop') ><b>RightDown</b></button>";
   page += "</p>";
 
   page += "<p align=center>";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px;onmousedown=getsend('model1') onmouseup=getsend('model1') ontouchstart=getsend('model1') ontouchend=getsend('model1') ><b>model1</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px onmousedown=getsend('model2') onmouseup=getsend('model2') ontouchstart=getsend('model2') ontouchend=getsend('model2') ><b>model2</b></button>";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('clockwise') onmouseup=getsend('stop') ontouchstart=getsend('clockwise') ontouchend=getsend('stop') ><b>Clockwise</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('contrario') onmouseup=getsend('stop') ontouchstart=getsend('contrario') ontouchend=getsend('stop') ><b>Contrario</b></button>&nbsp;";
   page += "</p>";
 
   page += "<p align=center>";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px;onmousedown=getsend('model3') onmouseup=getsend('model3') ontouchstart=getsend('model3') ontouchend=getsend('model3') ><b>model3</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px onmousedown=getsend('model4') onmouseup=getsend('model4') ontouchstart=getsend('model4') ontouchend=getsend('model4') ><b>model4</b></button>";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('model1') onmouseup=getsend('model1') ontouchstart=getsend('model1') ontouchend=getsend('model1') ><b>model1</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('model2') onmouseup=getsend('model2') ontouchstart=getsend('model2') ontouchend=getsend('model2') ><b>model2</b></button>";
   page += "</p>";
 
   page += "<p align=center>";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px onmousedown=getsend('motorleft') onmouseup=getsend('stop') ontouchstart=getsend('motorleft') ontouchend=getsend('stop') ><b>MotorLeft</b></button>&nbsp;";
-  page += "<button style=background-color:lightgrey;width:120px;height:40px onmousedown=getsend('motorright') onmouseup=getsend('stop') ontouchstart=getsend('motorright') ontouchend=getsend('stop') ><b>MotorRight</b></button>";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('model3') onmouseup=getsend('model3') ontouchstart=getsend('model3') ontouchend=getsend('model3') ><b>model3</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('model4') onmouseup=getsend('model4') ontouchstart=getsend('model4') ontouchend=getsend('model4') ><b>model4</b></button>";
   page += "</p>";
 
   page += "<p align=center>";
-  page += "<button style=background-color:yellow;width:100px;height:40px onmousedown=getsend('ledon')><b>Light ON</b></button>&nbsp;";
-  page += "<button style=background-color:indianred;width:100px;height:40px onmousedown=getsend('stop') onmouseup=getsend('stop')><b>Stop</b></button>&nbsp;";
-  page += "<button style=background-color:yellow;width:100px;height:40px onmousedown=getsend('ledoff')><b>Light OFF</b></button>";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('motorleft') onmouseup=getsend('stop') ontouchstart=getsend('motorleft') ontouchend=getsend('stop') ><b>MotorLeft</b></button>&nbsp;";
+  page += "<button style=background-color:lightgrey;width:120px;height:40px; onmousedown=getsend('motorright') onmouseup=getsend('stop') ontouchstart=getsend('motorright') ontouchend=getsend('stop') ><b>MotorRight</b></button>";
+  page += "</p>";
+
+  page += "<p align=center>";
+  page += "<button style=background-color:yellow;width:100px;height:40px; onmousedown=getsend('ledon')><b>Light ON</b></button>&nbsp;";
+  page += "<button style=background-color:indianred;width:100px;height:40px; onmousedown=getsend('stop') onmouseup=getsend('stop')><b>Stop</b></button>&nbsp;";
+  page += "<button style=background-color:yellow;width:100px;height:40px; onmousedown=getsend('ledoff')><b>Light OFF</b></button>";
   page += "</p>";
 
   return httpd_resp_send(req, &page[0], strlen(&page[0]));
@@ -973,6 +978,14 @@ static esp_err_t clockwise_handler(httpd_req_t *req) // 顺时针原地旋转
   txdata[1] = Clockwise;
   Serial.write(txdata, 3);
   Serial.println("clockwise");
+  httpd_resp_set_type(req, "text/html");
+  return httpd_resp_send(req, "OK", 2);
+}
+static esp_err_t contrario_handler(httpd_req_t *req) // 逆时针原地旋转
+{
+  txdata[1] = Contrarotate;
+  Serial.write(txdata, 3);
+  Serial.println("contrario");
   httpd_resp_set_type(req, "text/html");
   return httpd_resp_send(req, "OK", 2);
 }
@@ -1236,6 +1249,12 @@ void startCameraServer()
                                .handler = clockwise_handler,
                                .user_ctx = NULL};
 
+  httpd_uri_t contrario_uri = {// 逆时针原地旋转
+                               .uri = "/contrario",
+                               .method = HTTP_GET,
+                               .handler = contrario_handler,
+                               .user_ctx = NULL};
+
   httpd_uri_t model1_uri = {// 模式1
                             .uri = "/model1",
                             .method = HTTP_GET,
@@ -1312,6 +1331,7 @@ void startCameraServer()
     httpd_register_uri_handler(camera_httpd, &rightup_uri);
     httpd_register_uri_handler(camera_httpd, &rightdown_uri);
     httpd_register_uri_handler(camera_httpd, &clockwise_uri);
+    httpd_register_uri_handler(camera_httpd, &contrario_uri);
     httpd_register_uri_handler(camera_httpd, &model1_uri);
     httpd_register_uri_handler(camera_httpd, &model2_uri);
     httpd_register_uri_handler(camera_httpd, &model3_uri);
