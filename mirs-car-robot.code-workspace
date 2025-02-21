@@ -5,9 +5,6 @@
 			"path": "."
 		},
 		{
-			"path": "../CameraWebServer"
-		},
-		{
 			"path": "../../Personal/2_Arduino_Code/6.2_Arduino_UNO"
 		}
 	],
