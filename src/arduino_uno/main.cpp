@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Servo.h>
+#include "mecanum_motor.h"
 
 // servo control pin
 #define MOTOR_PIN 9
@@ -25,30 +26,18 @@ void model1_func(byte orders);
 void model2_func();
 void model3_func();
 void model4_func();
-void Motor(int Dir, int Speed);
 void motorleft();
 void motorright();
 float SR04(int Trig, int Echo);
 
 Servo MOTORservo;
 
-const int Forward = 92;       // forward
-const int Backward = 163;     // back
-const int Turn_Left = 149;    // left translation
-const int Turn_Right = 106;   // Right translation
-const int Top_Left = 20;      // Upper left mobile
-const int Bottom_Left = 129;  // Lower left mobile
-const int Top_Right = 72;     // Upper right mobile
-const int Bottom_Right = 34;  // The lower right move
-const int Stop = 0;           // stop
-const int Contrarotate = 172; // Counterclockwise rotation
-const int Clockwise = 83;     // Rotate clockwise
-const int Moedl1 = 25;        // model1
-const int Moedl2 = 26;        // model2
-const int Moedl3 = 27;        // model3
-const int Moedl4 = 28;        // model4
-const int MotorLeft = 230;    // servo turn left
-const int MotorRight = 231;   // servo turn right
+const int Mode1 = 25;      // model1
+const int Mode2 = 26;      // model2
+const int Mode3 = 27;      // model3
+const int Mode4 = 28;      // model4
+const int MotorLeft = 230;  // servo turn left
+const int MotorRight = 231; // servo turn right
 
 int Left_Tra_Value;
 int Center_Tra_Value;
@@ -61,9 +50,12 @@ int rightDistance = 0;
 
 byte RX_package[3] = {0};
 uint16_t angle = 90;
-byte order = Stop;
+byte order = MecanumMotor::Stop;
 char model_var = 0;
 int UT_distance = 0;
+
+// Create motor instance
+MecanumMotor motor(PWM1_PIN, PWM2_PIN, SHCP_PIN, EN_PIN, DATA_PIN, STCP_PIN);
 
 void setup()
 {
@@ -88,7 +80,7 @@ void setup()
 
   MOTORservo.write(angle);
 
-  Motor(Stop, 0);
+  motor.begin();
 }
 
 void loop()
@@ -115,38 +107,38 @@ void model1_func(byte orders)
 {
   switch (orders)
   {
-  case Stop:
-    Motor(Stop, 0);
+  case MecanumMotor::Stop:
+    motor.drive(MecanumMotor::Stop, 0);
     break;
-  case Forward:
-    Motor(Forward, 180);
+  case MecanumMotor::Forward:
+    motor.drive(MecanumMotor::Forward, 180);
     break;
-  case Backward:
-    Motor(Backward, 180);
+  case MecanumMotor::Backward:
+    motor.drive(MecanumMotor::Backward, 180);
     break;
-  case Turn_Left:
-    Motor(Turn_Left, 180);
+  case MecanumMotor::Turn_Left:
+    motor.drive(MecanumMotor::Turn_Left, 180);
     break;
-  case Turn_Right:
-    Motor(Turn_Right, 180);
+  case MecanumMotor::Turn_Right:
+    motor.drive(MecanumMotor::Turn_Right, 180);
     break;
-  case Top_Left:
-    Motor(Top_Left, 180);
+  case MecanumMotor::Top_Left:
+    motor.drive(MecanumMotor::Top_Left, 180);
     break;
-  case Top_Right:
-    Motor(Top_Right, 180);
+  case MecanumMotor::Top_Right:
+    motor.drive(MecanumMotor::Top_Right, 180);
     break;
-  case Bottom_Left:
-    Motor(Bottom_Left, 180);
+  case MecanumMotor::Bottom_Left:
+    motor.drive(MecanumMotor::Bottom_Left, 180);
     break;
-  case Bottom_Right:
-    Motor(Bottom_Right, 180);
+  case MecanumMotor::Bottom_Right:
+    motor.drive(MecanumMotor::Bottom_Right, 180);
     break;
-  case Clockwise:
-    Motor(Clockwise, 180);
+  case MecanumMotor::Clockwise:
+    motor.drive(MecanumMotor::Clockwise, 180);
     break;
-  case Contrarotate:
-    Motor(Contrarotate, 180);
+  case MecanumMotor::Contrarotate:
+    motor.drive(MecanumMotor::Contrarotate, 180);
     break;
   case MotorLeft:
     motorleft();
@@ -156,8 +148,8 @@ void model1_func(byte orders)
     break;
   default:
     // Serial.println(".");
-    order = 0;
-    Motor(Stop, 0);
+    order = MecanumMotor::Stop;
+    motor.drive(MecanumMotor::Stop, 0);
     break;
   }
 }
@@ -171,7 +163,7 @@ void model2_func() // OA
 
   if (middleDistance <= 25)
   {
-    Motor(Stop, 0);
+    motor.drive(MecanumMotor::Stop, 0);
     for (int i = 0; i < 500; i++)
     {
       delay(1);
@@ -213,7 +205,7 @@ void model2_func() // OA
     if ((rightDistance < 20) && (leftDistance < 20))
     {
 
-      Motor(Backward, 180);
+      motor.drive(MecanumMotor::Backward, 180);
       for (int i = 0; i < 1000; i++)
       {
         delay(1);
@@ -221,7 +213,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Contrarotate, 250);
+      motor.drive(MecanumMotor::Contrarotate, 250);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -232,7 +224,7 @@ void model2_func() // OA
     }
     else if (rightDistance < leftDistance)
     {
-      Motor(Stop, 0);
+      motor.drive(MecanumMotor::Stop, 0);
       for (int i = 0; i < 100; i++)
       {
         delay(1);
@@ -240,7 +232,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Backward, 180);
+      motor.drive(MecanumMotor::Backward, 180);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -248,7 +240,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Contrarotate, 250);
+      motor.drive(MecanumMotor::Contrarotate, 250);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -259,7 +251,7 @@ void model2_func() // OA
     } // turn right
     else if (rightDistance > leftDistance)
     {
-      Motor(Stop, 0);
+      motor.drive(MecanumMotor::Stop, 0);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -267,7 +259,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Backward, 180);
+      motor.drive(MecanumMotor::Backward, 180);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -275,7 +267,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Clockwise, 250);
+      motor.drive(MecanumMotor::Clockwise, 250);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -286,7 +278,7 @@ void model2_func() // OA
     }
     else
     {
-      Motor(Backward, 180);
+      motor.drive(MecanumMotor::Backward, 180);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -294,7 +286,7 @@ void model2_func() // OA
         if (model_var != 1)
           return;
       }
-      Motor(Clockwise, 250);
+      motor.drive(MecanumMotor::Clockwise, 250);
       for (int i = 0; i < 500; i++)
       {
         delay(1);
@@ -306,7 +298,7 @@ void model2_func() // OA
   }
   else
   {
-    Motor(Forward, 250);
+    motor.drive(MecanumMotor::Forward, 250);
   }
 }
 
@@ -317,23 +309,23 @@ void model3_func() // follow model
   Serial.println(UT_distance);
   if (UT_distance < 15)
   {
-    Motor(Backward, 200);
+    motor.drive(MecanumMotor::Backward, 200);
   }
   else if (15 <= UT_distance && UT_distance <= 20)
   {
-    Motor(Stop, 0);
+    motor.drive(MecanumMotor::Stop, 0);
   }
   else if (20 <= UT_distance && UT_distance <= 25)
   {
-    Motor(Forward, 180);
+    motor.drive(MecanumMotor::Forward, 180);
   }
   else if (25 <= UT_distance && UT_distance <= 50)
   {
-    Motor(Forward, 220);
+    motor.drive(MecanumMotor::Forward, 220);
   }
   else
   {
-    Motor(Stop, 0);
+    motor.drive(MecanumMotor::Stop, 0);
   }
 }
 
@@ -345,27 +337,27 @@ void model4_func() // tracking model
   Right_Tra_Value = analogRead(RIGHT_LINE_TRACKING);
   if (Left_Tra_Value < Black_Line && Center_Tra_Value >= Black_Line && Right_Tra_Value < Black_Line)
   {
-    Motor(Forward, 250);
+    motor.drive(MecanumMotor::Forward, 250);
   }
   else if (Left_Tra_Value >= Black_Line && Center_Tra_Value >= Black_Line && Right_Tra_Value < Black_Line)
   {
-    Motor(Contrarotate, 220);
+    motor.drive(MecanumMotor::Contrarotate, 220);
   }
   else if (Left_Tra_Value >= Black_Line && Center_Tra_Value < Black_Line && Right_Tra_Value < Black_Line)
   {
-    Motor(Contrarotate, 250);
+    motor.drive(MecanumMotor::Contrarotate, 250);
   }
   else if (Left_Tra_Value < Black_Line && Center_Tra_Value < Black_Line && Right_Tra_Value >= Black_Line)
   {
-    Motor(Clockwise, 250);
+    motor.drive(MecanumMotor::Clockwise, 250);
   }
   else if (Left_Tra_Value < Black_Line && Center_Tra_Value >= Black_Line && Right_Tra_Value >= Black_Line)
   {
-    Motor(Clockwise, 220);
+    motor.drive(MecanumMotor::Clockwise, 220);
   }
   else if (Left_Tra_Value >= Black_Line && Center_Tra_Value >= Black_Line && Right_Tra_Value >= Black_Line)
   {
-    Motor(Stop, 0);
+    motor.drive(MecanumMotor::Stop, 0);
   }
 }
 void motorleft() // servo
@@ -383,17 +375,6 @@ void motorright() // servo
   if (angle <= 1)
     angle = 1;
   delay(10);
-}
-
-void Motor(int Dir, int Speed) // motor drive
-{
-  digitalWrite(EN_PIN, LOW);
-  analogWrite(PWM1_PIN, Speed);
-  analogWrite(PWM2_PIN, Speed);
-
-  digitalWrite(STCP_PIN, LOW);
-  shiftOut(DATA_PIN, SHCP_PIN, MSBFIRST, Dir);
-  digitalWrite(STCP_PIN, HIGH);
 }
 
 float SR04(int Trig, int Echo) // ultrasonic measured distance
@@ -420,19 +401,19 @@ void RXpack_func() // Receive data
       {
         order = RX_package[1];
         Serial.println(order);
-        if (order == Moedl1)
+        if (order == Mode1)
         {
           model_var = 0;
         }
-        else if (order == Moedl2)
+        else if (order == Mode2)
         {
           model_var = 1;
         }
-        else if (order == Moedl3)
+        else if (order == Mode3)
         {
           model_var = 2;
         }
-        else if (order == Moedl4)
+        else if (order == Mode4)
         {
           model_var = 3;
         }
