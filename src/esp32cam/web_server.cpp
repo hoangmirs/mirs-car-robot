@@ -676,11 +676,26 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
       // Button mapping for robot controls
       const buttonMappings = {
         'Up': 'go',           // Up
-        'Down': 'back',  // Down
+        'Down': 'back',       // Down
         'Left': 'left',       // Left
-        'Right': 'right', // Right
-        'Touch Pad': 'stop'   // Touch Pad
+        'Right': 'right',     // Right
+        'L1': 'motorleft',    // L1 for MotorLeft
+        'R1': 'motorright',   // R1 for MotorRight
+        'Cross': 'model1',    // Cross for Model1
+        'Square': 'model2',   // Square for Model2
+        'Triangle': 'model3', // Triangle for Model3
+        'Circle': 'model4',   // Circle for Model4
+        'R3': 'ledtoggle',    // R3 for LED toggle
+        'Touch Pad': 'stop'   // Touch Pad for Stop
       };
+
+      // Threshold for analog stick movement
+      const STICK_THRESHOLD = 0.3;
+
+      // Current movement state
+      let currentMovement = 'stop';
+      let currentRotation = 'stop';
+      let ledState = false;
 
       // Log debug information
       function logDebug(message) {
@@ -790,11 +805,32 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
               logDebug(`Button ${i} (${buttonName}): ${isPressed ? 'Pressed' : 'Released'}`);
 
               // Handle mapped buttons
-              if (buttonMappings[buttonName] && isPressed) {
-                // Send command to robot
-                const command = buttonMappings[buttonName];
-                logDebug(`Sending command: ${command}`);
-                sendCommand(command);
+              if (buttonMappings[buttonName]) {
+                // Special handling for L1/R1 - stop when released
+                if ((buttonName === 'L1' || buttonName === 'R1') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for directional buttons - stop when released
+                else if ((buttonName === 'Up' || buttonName === 'Down' ||
+                         buttonName === 'Left' || buttonName === 'Right') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for R3 - toggle LED
+                else if (buttonName === 'R3' && isPressed) {
+                  ledState = !ledState;
+                  const command = ledState ? 'ledon' : 'ledoff';
+                  logDebug(`Sending command: ${command} (LED ${ledState ? 'ON' : 'OFF'})`);
+                  sendCommand(command);
+                }
+                // Handle other buttons
+                else if (isPressed) {
+                  // Send command to robot
+                  const command = buttonMappings[buttonName];
+                  logDebug(`Sending command: ${command}`);
+                  sendCommand(command);
+                }
               }
 
               // Special handling for L2/R2 triggers
@@ -815,7 +851,7 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
           return;
         }
 
-        // Left stick (axes 0 and 1)
+        // Left stick (axes 0 and 1) - 8-directional movement
         if (axes.length >= 2) {
           const leftX = axes[0];
           const leftY = axes[1];
@@ -824,12 +860,42 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
           leftXElement.textContent = leftX.toFixed(2);
           leftYElement.textContent = leftY.toFixed(2);
 
-          if (Math.abs(leftX) > 0.1 || Math.abs(leftY) > 0.1) {
-            logDebug(`Left stick: X=${leftX.toFixed(2)}, Y=${leftY.toFixed(2)}`);
+          // Determine movement direction based on stick position
+          let newMovement = 'stop';
+
+          if (Math.abs(leftX) > STICK_THRESHOLD || Math.abs(leftY) > STICK_THRESHOLD) {
+            // Calculate angle in degrees (0 is right, 90 is down, 180 is left, 270 is up)
+            const angle = Math.atan2(leftY, leftX) * (180 / Math.PI);
+
+            // Map angle to 8 directions
+            if (angle >= -22.5 && angle < 22.5) {
+              newMovement = 'right';
+            } else if (angle >= 22.5 && angle < 67.5) {
+              newMovement = 'rightdown';
+            } else if (angle >= 67.5 && angle < 112.5) {
+              newMovement = 'back';
+            } else if (angle >= 112.5 && angle < 157.5) {
+              newMovement = 'leftdown';
+            } else if (angle >= 157.5 || angle < -157.5) {
+              newMovement = 'left';
+            } else if (angle >= -157.5 && angle < -112.5) {
+              newMovement = 'leftup';
+            } else if (angle >= -112.5 && angle < -67.5) {
+              newMovement = 'go';
+            } else if (angle >= -67.5 && angle < -22.5) {
+              newMovement = 'rightup';
+            }
+          }
+
+          // Only send command if movement has changed
+          if (newMovement !== currentMovement) {
+            currentMovement = newMovement;
+            logDebug(`Left stick movement: ${currentMovement}`);
+            sendCommand(currentMovement);
           }
         }
 
-        // Right stick (axes 2 and 3)
+        // Right stick (axes 2 and 3) - Rotation control
         if (axes.length >= 4) {
           const rightX = axes[2];
           const rightY = axes[3];
@@ -838,8 +904,22 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
           rightXElement.textContent = rightX.toFixed(2);
           rightYElement.textContent = rightY.toFixed(2);
 
-          if (Math.abs(rightX) > 0.1 || Math.abs(rightY) > 0.1) {
-            logDebug(`Right stick: X=${rightX.toFixed(2)}, Y=${rightY.toFixed(2)}`);
+          // Determine rotation based on right stick X axis
+          let newRotation = 'stop';
+
+          if (Math.abs(rightX) > STICK_THRESHOLD) {
+            if (rightX > 0) {
+              newRotation = 'clockwise';
+            } else {
+              newRotation = 'contrario';
+            }
+          }
+
+          // Only send command if rotation has changed
+          if (newRotation !== currentRotation) {
+            currentRotation = newRotation;
+            logDebug(`Right stick rotation: ${currentRotation}`);
+            sendCommand(currentRotation);
           }
         }
       }
@@ -871,7 +951,7 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
               logDebug(`Number of axes: ${currentGamepad.axes.length}`);
               logDebug('Button mappings:');
               Object.entries(buttonMappings).forEach(([button, command]) => {
-                logDebug(`${button} → ${command}`);
+                logDebug(`${button} -> ${command}`);
               });
               gamepad = currentGamepad;
               updateControllerInfo();
@@ -915,19 +995,40 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
         legendDiv.style.borderRadius = '5px';
 
         const legendTitle = document.createElement('h3');
-        legendTitle.textContent = 'Button Mappings';
+        legendTitle.textContent = 'Controller Mappings';
         legendDiv.appendChild(legendTitle);
 
         const mappingsList = document.createElement('ul');
         mappingsList.style.listStyle = 'none';
         mappingsList.style.padding = '0';
 
+        // Add button mappings
+        const buttonMappingsTitle = document.createElement('h4');
+        buttonMappingsTitle.textContent = 'Button Mappings';
+        mappingsList.appendChild(buttonMappingsTitle);
+
         Object.entries(buttonMappings).forEach(([button, command]) => {
           const listItem = document.createElement('li');
           listItem.style.margin = '5px 0';
-          listItem.textContent = `${button} → ${command}`;
+          listItem.textContent = `${button} -> ${command}`;
           mappingsList.appendChild(listItem);
         });
+
+        // Add analog stick mappings
+        const stickMappingsTitle = document.createElement('h4');
+        stickMappingsTitle.textContent = 'Analog Stick Mappings';
+        stickMappingsTitle.style.marginTop = '15px';
+        mappingsList.appendChild(stickMappingsTitle);
+
+        const leftStickItem = document.createElement('li');
+        leftStickItem.style.margin = '5px 0';
+        leftStickItem.textContent = 'Left Stick -> 8-directional movement (Forward, Backward, Left, Right, and diagonals)';
+        mappingsList.appendChild(leftStickItem);
+
+        const rightStickItem = document.createElement('li');
+        rightStickItem.style.margin = '5px 0';
+        rightStickItem.textContent = 'Right Stick -> Rotation (Left = Counterclockwise, Right = Clockwise)';
+        mappingsList.appendChild(rightStickItem);
 
         legendDiv.appendChild(mappingsList);
         document.querySelector('.container').insertBefore(legendDiv, document.querySelector('.debug-info'));
@@ -1231,7 +1332,7 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
 
     <div class="video-container">
       <img src="" id="photo">
-      <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+      <button class="fullscreen-btn" onclick="toggleFullscreen()">Fullscreen</button>
     </div>
 
     <div id="status" class="status disconnected">
@@ -1356,11 +1457,26 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
       // Button mapping for robot controls
       const buttonMappings = {
         'Up': 'go',           // Up
-        'Down': 'back',  // Down
+        'Down': 'back',       // Down
         'Left': 'left',       // Left
-        'Right': 'right', // Right
-        'Touch Pad': 'stop'   // Touch Pad
+        'Right': 'right',     // Right
+        'L1': 'motorleft',    // L1 for MotorLeft
+        'R1': 'motorright',   // R1 for MotorRight
+        'Cross': 'model1',    // Cross for Model1
+        'Square': 'model2',   // Square for Model2
+        'Triangle': 'model3', // Triangle for Model3
+        'Circle': 'model4',   // Circle for Model4
+        'R3': 'ledtoggle',    // R3 for LED toggle
+        'Touch Pad': 'stop'   // Touch Pad for Stop
       };
+
+      // Threshold for analog stick movement
+      const STICK_THRESHOLD = 0.3;
+
+      // Current movement state
+      let currentMovement = 'stop';
+      let currentRotation = 'stop';
+      let ledState = false;
 
       // Log debug information
       function logDebug(message) {
@@ -1470,11 +1586,32 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
               logDebug(`Button ${i} (${buttonName}): ${isPressed ? 'Pressed' : 'Released'}`);
 
               // Handle mapped buttons
-              if (buttonMappings[buttonName] && isPressed) {
-                // Send command to robot
-                const command = buttonMappings[buttonName];
-                logDebug(`Sending command: ${command}`);
-                sendCommand(command);
+              if (buttonMappings[buttonName]) {
+                // Special handling for L1/R1 - stop when released
+                if ((buttonName === 'L1' || buttonName === 'R1') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for directional buttons - stop when released
+                else if ((buttonName === 'Up' || buttonName === 'Down' ||
+                         buttonName === 'Left' || buttonName === 'Right') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for R3 - toggle LED
+                else if (buttonName === 'R3' && isPressed) {
+                  ledState = !ledState;
+                  const command = ledState ? 'ledon' : 'ledoff';
+                  logDebug(`Sending command: ${command} (LED ${ledState ? 'ON' : 'OFF'})`);
+                  sendCommand(command);
+                }
+                // Handle other buttons
+                else if (isPressed) {
+                  // Send command to robot
+                  const command = buttonMappings[buttonName];
+                  logDebug(`Sending command: ${command}`);
+                  sendCommand(command);
+                }
               }
 
               // Special handling for L2/R2 triggers
@@ -1495,7 +1632,7 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
           return;
         }
 
-        // Left stick (axes 0 and 1)
+        // Left stick (axes 0 and 1) - 8-directional movement
         if (axes.length >= 2) {
           const leftX = axes[0];
           const leftY = axes[1];
@@ -1504,12 +1641,42 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
           leftXElement.textContent = leftX.toFixed(2);
           leftYElement.textContent = leftY.toFixed(2);
 
-          if (Math.abs(leftX) > 0.1 || Math.abs(leftY) > 0.1) {
-            logDebug(`Left stick: X=${leftX.toFixed(2)}, Y=${leftY.toFixed(2)}`);
+          // Determine movement direction based on stick position
+          let newMovement = 'stop';
+
+          if (Math.abs(leftX) > STICK_THRESHOLD || Math.abs(leftY) > STICK_THRESHOLD) {
+            // Calculate angle in degrees (0 is right, 90 is down, 180 is left, 270 is up)
+            const angle = Math.atan2(leftY, leftX) * (180 / Math.PI);
+
+            // Map angle to 8 directions
+            if (angle >= -22.5 && angle < 22.5) {
+              newMovement = 'right';
+            } else if (angle >= 22.5 && angle < 67.5) {
+              newMovement = 'rightdown';
+            } else if (angle >= 67.5 && angle < 112.5) {
+              newMovement = 'back';
+            } else if (angle >= 112.5 && angle < 157.5) {
+              newMovement = 'leftdown';
+            } else if (angle >= 157.5 || angle < -157.5) {
+              newMovement = 'left';
+            } else if (angle >= -157.5 && angle < -112.5) {
+              newMovement = 'leftup';
+            } else if (angle >= -112.5 && angle < -67.5) {
+              newMovement = 'go';
+            } else if (angle >= -67.5 && angle < -22.5) {
+              newMovement = 'rightup';
+            }
+          }
+
+          // Only send command if movement has changed
+          if (newMovement !== currentMovement) {
+            currentMovement = newMovement;
+            logDebug(`Left stick movement: ${currentMovement}`);
+            sendCommand(currentMovement);
           }
         }
 
-        // Right stick (axes 2 and 3)
+        // Right stick (axes 2 and 3) - Rotation control
         if (axes.length >= 4) {
           const rightX = axes[2];
           const rightY = axes[3];
@@ -1518,8 +1685,22 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
           rightXElement.textContent = rightX.toFixed(2);
           rightYElement.textContent = rightY.toFixed(2);
 
-          if (Math.abs(rightX) > 0.1 || Math.abs(rightY) > 0.1) {
-            logDebug(`Right stick: X=${rightX.toFixed(2)}, Y=${rightY.toFixed(2)}`);
+          // Determine rotation based on right stick X axis
+          let newRotation = 'stop';
+
+          if (Math.abs(rightX) > STICK_THRESHOLD) {
+            if (rightX > 0) {
+              newRotation = 'clockwise';
+            } else {
+              newRotation = 'contrario';
+            }
+          }
+
+          // Only send command if rotation has changed
+          if (newRotation !== currentRotation) {
+            currentRotation = newRotation;
+            logDebug(`Right stick rotation: ${currentRotation}`);
+            sendCommand(currentRotation);
           }
         }
       }
@@ -1551,7 +1732,7 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
               logDebug(`Number of axes: ${currentGamepad.axes.length}`);
               logDebug('Button mappings:');
               Object.entries(buttonMappings).forEach(([button, command]) => {
-                logDebug(`${button} → ${command}`);
+                logDebug(`${button} -> ${command}`);
               });
               gamepad = currentGamepad;
               updateControllerInfo();
@@ -1595,19 +1776,40 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
         legendDiv.style.borderRadius = '5px';
 
         const legendTitle = document.createElement('h3');
-        legendTitle.textContent = 'Button Mappings';
+        legendTitle.textContent = 'Controller Mappings';
         legendDiv.appendChild(legendTitle);
 
         const mappingsList = document.createElement('ul');
         mappingsList.style.listStyle = 'none';
         mappingsList.style.padding = '0';
 
+        // Add button mappings
+        const buttonMappingsTitle = document.createElement('h4');
+        buttonMappingsTitle.textContent = 'Button Mappings';
+        mappingsList.appendChild(buttonMappingsTitle);
+
         Object.entries(buttonMappings).forEach(([button, command]) => {
           const listItem = document.createElement('li');
           listItem.style.margin = '5px 0';
-          listItem.textContent = `${button} → ${command}`;
+          listItem.textContent = `${button} -> ${command}`;
           mappingsList.appendChild(listItem);
         });
+
+        // Add analog stick mappings
+        const stickMappingsTitle = document.createElement('h4');
+        stickMappingsTitle.textContent = 'Analog Stick Mappings';
+        stickMappingsTitle.style.marginTop = '15px';
+        mappingsList.appendChild(stickMappingsTitle);
+
+        const leftStickItem = document.createElement('li');
+        leftStickItem.style.margin = '5px 0';
+        leftStickItem.textContent = 'Left Stick -> 8-directional movement (Forward, Backward, Left, Right, and diagonals)';
+        mappingsList.appendChild(leftStickItem);
+
+        const rightStickItem = document.createElement('li');
+        rightStickItem.style.margin = '5px 0';
+        rightStickItem.textContent = 'Right Stick -> Rotation (Left = Counterclockwise, Right = Clockwise)';
+        mappingsList.appendChild(rightStickItem);
 
         legendDiv.appendChild(mappingsList);
         document.querySelector('.container').insertBefore(legendDiv, document.querySelector('.debug-info'));
