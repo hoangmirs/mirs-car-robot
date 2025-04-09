@@ -62,4 +62,6 @@ private:
   // Helper methods
   static esp_err_t parseGet(httpd_req_t *req, char **obuf);
   static int parseGetVar(char *buf, const char *key, int def);
+
+  static esp_err_t gamepadHandler(httpd_req_t *req);
 };
