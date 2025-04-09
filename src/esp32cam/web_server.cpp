@@ -606,8 +606,37 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
     </p>
   </div>
   <script>
+    // Global functions for button handlers
+    function toggleCheckbox(command) {
+      fetch('/' + command)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function toggleFullscreen() {
+      const videoContainer = document.querySelector('.video-container');
+      if (!document.fullscreenElement) {
+        videoContainer.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
     // Initialize everything when the page loads
     window.addEventListener('DOMContentLoaded', function() {
+      // Camera stream
+      const photo = document.getElementById('photo');
+      photo.src = 'http://' + window.location.hostname + ':81/stream';
+
       // Gamepad state
       let gamepad = null;
       let buttonElements = [];
@@ -1167,12 +1196,43 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
       max-height: 200px;
       overflow-y: auto;
     }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin: 20px auto;
+    }
+    .video-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .fullscreen-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    .fullscreen-btn:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>ESP32-CAM Gamepad Controller</h1>
     <a href="/" class="nav-link">Back to Robot Control</a>
+
+    <div class="video-container">
+      <img src="" id="photo">
+      <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+    </div>
 
     <div id="status" class="status disconnected">
       Controller: Disconnected
@@ -1226,8 +1286,37 @@ esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
   </div>
 
   <script>
+    // Global functions for button handlers
+    function toggleCheckbox(command) {
+      fetch('/' + command)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function toggleFullscreen() {
+      const videoContainer = document.querySelector('.video-container');
+      if (!document.fullscreenElement) {
+        videoContainer.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
     // Initialize everything when the page loads
     window.addEventListener('DOMContentLoaded', function() {
+      // Camera stream
+      const photo = document.getElementById('photo');
+      photo.src = 'http://' + window.location.hostname + ':81/stream';
+
       // Gamepad state
       let gamepad = null;
       let buttonElements = [];
