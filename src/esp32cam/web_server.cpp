@@ -157,6 +157,14 @@ void WebServer::registerHandlers()
       .user_ctx = this};
   httpd_register_uri_handler(camera_httpd, &capture_uri);
 
+  // Register gamepad handler
+  httpd_uri_t gamepad_uri = {
+      .uri = "/gamepad",
+      .method = HTTP_GET,
+      .handler = gamepadHandler,
+      .user_ctx = this};
+  httpd_register_uri_handler(camera_httpd, &gamepad_uri);
+
   // Register all robot control handlers
   const httpd_uri_t movement_handlers[] = {
       {"/go", HTTP_GET, goHandler, this},
@@ -524,66 +532,551 @@ esp_err_t WebServer::indexHandler(httpd_req_t *req)
       user-select: none;
       -webkit-tap-highlight-color: rgba(0,0,0,0);
     }
-    img { width: auto; max-width: 100%; height: auto; }
+    img {
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 20px auto;
+    }
+    .nav-link {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 10px;
+      font-weight: bold;
+    }
+    .video-container {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .controls-container {
+      margin-top: 20px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>ESP32-CAM Robot</h1>
-  <img src="" id="photo">
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('leftup');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('leftup');" ontouchend="toggleCheckbox('stop')"><b>LeftUp</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('go');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('go');" ontouchend="toggleCheckbox('stop')"><b>Forward</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('rightup');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('rightup');" ontouchend="toggleCheckbox('stop')"><b>RightUp</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('left');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('left');" ontouchend="toggleCheckbox('stop')"><b>Left</b></button>&nbsp;
-    <button style="background-color:indianred" class="button" onmousedown="toggleCheckbox('stop');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop')"><b>Stop</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('right');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('right');" ontouchend="toggleCheckbox('stop')"><b>Right</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('leftdown');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('leftdown');" ontouchend="toggleCheckbox('stop')"><b>LeftDown</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('back');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('back');" ontouchend="toggleCheckbox('stop')"><b>Backward</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('rightdown');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('rightdown');" ontouchend="toggleCheckbox('stop')"><b>RightDown</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('clockwise');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('clockwise');" ontouchend="toggleCheckbox('stop')"><b>Clockwise</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('contrario');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('contrario');" ontouchend="toggleCheckbox('stop')"><b>Contrario</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('model1');" onmouseup="toggleCheckbox('model1');" ontouchstart="toggleCheckbox('model1');" ontouchend="toggleCheckbox('model1')"><b>Model1</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('model2');" onmouseup="toggleCheckbox('model2');" ontouchstart="toggleCheckbox('model2');" ontouchend="toggleCheckbox('model2')"><b>Model2</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('model3');" onmouseup="toggleCheckbox('model3');" ontouchstart="toggleCheckbox('model3');" ontouchend="toggleCheckbox('model3')"><b>Model3</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('model4');" onmouseup="toggleCheckbox('model4');" ontouchstart="toggleCheckbox('model4');" ontouchend="toggleCheckbox('model4')"><b>Model4</b></button>
-  </p>
-  <p align=center>
-    <button class="button" onmousedown="toggleCheckbox('motorleft');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('motorleft');" ontouchend="toggleCheckbox('stop')"><b>MotorLeft</b></button>&nbsp;
-    <button class="button" onmousedown="toggleCheckbox('motorright');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('motorright');" ontouchend="toggleCheckbox('stop')"><b>MotorRight</b></button>
-  </p>
-  <p align=center>
-    <button style="background-color:yellow" class="button" onmousedown="toggleCheckbox('ledon')"><b>Light ON</b></button>&nbsp;
-    <button style="background-color:indianred" class="button" onmousedown="toggleCheckbox('stop');" onmouseup="toggleCheckbox('stop')"><b>Stop</b></button>&nbsp;
-    <button style="background-color:yellow" class="button" onmousedown="toggleCheckbox('ledoff')"><b>Light OFF</b></button>
-  </p>
+  <div class="video-container">
+    <a href="/gamepad" class="nav-link">Gamepad Controller</a>
+    <img src="" id="photo">
+  </div>
+  <div class="controls-container">
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('leftup');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('leftup');" ontouchend="toggleCheckbox('stop')"><b>LeftUp</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('go');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('go');" ontouchend="toggleCheckbox('stop')"><b>Forward</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('rightup');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('rightup');" ontouchend="toggleCheckbox('stop')"><b>RightUp</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('left');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('left');" ontouchend="toggleCheckbox('stop')"><b>Left</b></button>&nbsp;
+      <button style="background-color:indianred" class="button" onmousedown="toggleCheckbox('stop');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop')"><b>Stop</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('right');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('right');" ontouchend="toggleCheckbox('stop')"><b>Right</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('leftdown');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('leftdown');" ontouchend="toggleCheckbox('stop')"><b>LeftDown</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('back');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('back');" ontouchend="toggleCheckbox('stop')"><b>Backward</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('rightdown');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('rightdown');" ontouchend="toggleCheckbox('stop')"><b>RightDown</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('clockwise');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('clockwise');" ontouchend="toggleCheckbox('stop')"><b>Clockwise</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('contrario');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('contrario');" ontouchend="toggleCheckbox('stop')"><b>Contrario</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('model1');" onmouseup="toggleCheckbox('model1');" ontouchstart="toggleCheckbox('model1');" ontouchend="toggleCheckbox('model1')"><b>Model1</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('model2');" onmouseup="toggleCheckbox('model2');" ontouchstart="toggleCheckbox('model2');" ontouchend="toggleCheckbox('model2')"><b>Model2</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('model3');" onmouseup="toggleCheckbox('model3');" ontouchstart="toggleCheckbox('model3');" ontouchend="toggleCheckbox('model3')"><b>Model3</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('model4');" onmouseup="toggleCheckbox('model4');" ontouchstart="toggleCheckbox('model4');" ontouchend="toggleCheckbox('model4')"><b>Model4</b></button>
+    </p>
+    <p align=center>
+      <button class="button" onmousedown="toggleCheckbox('motorleft');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('motorleft');" ontouchend="toggleCheckbox('stop')"><b>MotorLeft</b></button>&nbsp;
+      <button class="button" onmousedown="toggleCheckbox('motorright');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('motorright');" ontouchend="toggleCheckbox('stop')"><b>MotorRight</b></button>
+    </p>
+    <p align=center>
+      <button style="background-color:yellow" class="button" onmousedown="toggleCheckbox('ledon')"><b>Light ON</b></button>&nbsp;
+      <button style="background-color:indianred" class="button" onmousedown="toggleCheckbox('stop');" onmouseup="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop')"><b>Stop</b></button>&nbsp;
+      <button style="background-color:yellow" class="button" onmousedown="toggleCheckbox('ledoff')"><b>Light OFF</b></button>
+    </p>
+  </div>
   <script>
-   var xhttp = new XMLHttpRequest();
-   function toggleCheckbox(x) {
-     xhttp.open('GET', '/' + x + '?' + new Date().getTime(), true);
-     xhttp.send();
-   }
-   window.onload = function() {
-     var img = document.getElementById("photo");
-     var baseUrl = window.location.href.slice(0, -1).replace(/:80$/, '');
-     function startStream() {
-       img.src = baseUrl + ":81/stream";
-     }
-     img.onerror = function() {
-       console.log("Stream connection failed, retrying...");
-       setTimeout(startStream, 1000);
-     };
-     startStream();
-   };
+    // Global functions for button handlers
+    function toggleCheckbox(command) {
+      fetch('/' + command)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function toggleFullscreen() {
+      const videoContainer = document.querySelector('.video-container');
+      if (!document.fullscreenElement) {
+        videoContainer.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Initialize everything when the page loads
+    window.addEventListener('DOMContentLoaded', function() {
+      // Camera stream
+      const photo = document.getElementById('photo');
+      photo.src = 'http://' + window.location.hostname + ':81/stream';
+
+      // Gamepad state
+      let gamepad = null;
+      let buttonElements = [];
+      let buttonStates = [];
+      let debugContent = document.getElementById('debug-content');
+      let lastTimestamp = 0;
+      let pollCount = 0;
+      let lastPollTime = 0;
+      let animationFrameId = null;
+
+      // DOM elements
+      const statusElement = document.getElementById('status');
+      const controllerNameElement = document.getElementById('controller-name');
+      const controllerIdElement = document.getElementById('controller-id');
+      const controllerTimestampElement = document.getElementById('controller-timestamp');
+      const controllerMappingElement = document.getElementById('controller-mapping');
+      const controllerConnectedElement = document.getElementById('controller-connected');
+      const controllerButtonsCountElement = document.getElementById('controller-buttons-count');
+      const controllerAxesCountElement = document.getElementById('controller-axes-count');
+      const buttonGridElement = document.getElementById('button-grid');
+      const leftStickElement = document.getElementById('left-stick');
+      const rightStickElement = document.getElementById('right-stick');
+      const leftXElement = document.getElementById('left-x');
+      const leftYElement = document.getElementById('left-y');
+      const rightXElement = document.getElementById('right-x');
+      const rightYElement = document.getElementById('right-y');
+
+      // Button names for PS5 DualSense with mapped actions
+      const buttonNames = [
+        'Cross', 'Circle', 'Square', 'Triangle',
+        'L1', 'R1', 'L2', 'R2',
+        'Share', 'Options', 'L3', 'R3',
+        'Up', 'Down', 'Left', 'Right',
+        'PS', 'Touch Pad'
+      ];
+
+      // Button mapping for robot controls
+      const buttonMappings = {
+        'Up': 'go',           // Up
+        'Down': 'back',       // Down
+        'Left': 'left',       // Left
+        'Right': 'right',     // Right
+        'L1': 'motorleft',    // L1 for MotorLeft
+        'R1': 'motorright',   // R1 for MotorRight
+        'Cross': 'model1',    // Cross for Model1
+        'Square': 'model2',   // Square for Model2
+        'Triangle': 'model3', // Triangle for Model3
+        'Circle': 'model4',   // Circle for Model4
+        'R3': 'ledtoggle',    // R3 for LED toggle
+        'Touch Pad': 'stop'   // Touch Pad for Stop
+      };
+
+      // Threshold for analog stick movement
+      const STICK_THRESHOLD = 0.3;
+
+      // Current movement state
+      let currentMovement = 'stop';
+      let currentRotation = 'stop';
+      let ledState = false;
+
+      // Log debug information
+      function logDebug(message) {
+        const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+        const logLine = document.createElement('div');
+        logLine.textContent = `[${timestamp}] ${message}`;
+        debugContent.appendChild(logLine);
+        debugContent.scrollTop = debugContent.scrollHeight;
+      }
+
+      // Initialize button grid
+      function initButtonGrid() {
+        try {
+          buttonGridElement.innerHTML = '';
+          buttonElements = [];
+          buttonStates = [];
+
+          // Initialize with a minimum set of buttons
+          const initialButtonCount = 20; // Set higher than expected button count
+
+          for (let i = 0; i < initialButtonCount; i++) {
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'button';
+            buttonDiv.id = `button-${i}`;
+            buttonDiv.textContent = buttonNames[i] || `Button ${i}`;
+
+            // Add visual indicator for mapped buttons
+            const buttonName = buttonNames[i] || `Button ${i}`;
+            if (buttonMappings[buttonName]) {
+              buttonDiv.style.backgroundColor = '#4CAF50';
+              buttonDiv.style.color = 'white';
+            }
+
+            buttonGridElement.appendChild(buttonDiv);
+            buttonElements.push(buttonDiv);
+            buttonStates.push(false);
+          }
+
+          logDebug(`Initialized button grid with ${initialButtonCount} buttons`);
+        } catch (error) {
+          logDebug(`Error initializing button grid: ${error.message}`);
+        }
+      }
+
+      // Function to send commands to the robot
+      function sendCommand(command) {
+        fetch(`/${command}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(text => {
+            logDebug(`Command ${command} sent successfully`);
+          })
+          .catch(error => {
+            logDebug(`Error sending command ${command}: ${error.message}`);
+          });
+      }
+
+      // Update button states
+      function updateButtons(buttons) {
+        if (!buttons || buttons.length === 0) {
+          return;
+        }
+
+        try {
+          for (let i = 0; i < buttons.length; i++) {
+            const buttonElement = buttonElements[i];
+            if (!buttonElement) {
+              // If we don't have an element for this button index, create one
+              const buttonDiv = document.createElement('div');
+              buttonDiv.className = 'button';
+              buttonDiv.id = `button-${i}`;
+              buttonDiv.textContent = buttonNames[i] || `Button ${i}`;
+
+              // Add visual indicator for mapped buttons
+              const buttonName = buttonNames[i] || `Button ${i}`;
+              if (buttonMappings[buttonName]) {
+                buttonDiv.style.backgroundColor = '#4CAF50';
+                buttonDiv.style.color = 'white';
+              }
+
+              buttonGridElement.appendChild(buttonDiv);
+              buttonElements[i] = buttonDiv;
+              buttonStates[i] = false;
+              logDebug(`Created new button element for index ${i}`);
+            }
+
+            const isPressed = buttons[i].pressed || buttons[i].value > 0.5;
+            if (isPressed !== buttonStates[i]) {
+              buttonStates[i] = isPressed;
+              const buttonName = buttonNames[i] || `Button ${i}`;
+
+              // Update button appearance
+              if (buttonMappings[buttonName]) {
+                // Mapped buttons use a different color scheme
+                buttonElement.style.backgroundColor = isPressed ? '#45a049' : '#4CAF50';
+                buttonElement.style.color = 'white';
+              } else {
+                // Regular buttons use the default color scheme
+                buttonElement.classList.toggle('pressed', isPressed);
+              }
+
+              // Log button state
+              logDebug(`Button ${i} (${buttonName}): ${isPressed ? 'Pressed' : 'Released'}`);
+
+              // Handle mapped buttons
+              if (buttonMappings[buttonName]) {
+                // Special handling for L1/R1 - stop when released
+                if ((buttonName === 'L1' || buttonName === 'R1') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for directional buttons - stop when released
+                else if ((buttonName === 'Up' || buttonName === 'Down' ||
+                         buttonName === 'Left' || buttonName === 'Right') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for R3 - toggle LED
+                else if (buttonName === 'R3' && isPressed) {
+                  ledState = !ledState;
+                  const command = ledState ? 'ledon' : 'ledoff';
+                  logDebug(`Sending command: ${command} (LED ${ledState ? 'ON' : 'OFF'})`);
+                  sendCommand(command);
+                }
+                // Handle other buttons
+                else if (isPressed) {
+                  // Send command to robot
+                  const command = buttonMappings[buttonName];
+                  logDebug(`Sending command: ${command}`);
+                  sendCommand(command);
+                }
+              }
+
+              // Special handling for L2/R2 triggers
+              if ((buttonName.includes('L2') || buttonName.includes('R2')) && buttons[i].value) {
+                const value = buttons[i].value;
+                logDebug(`${buttonName} pressure: ${(value * 100).toFixed(0)}%`);
+              }
+            }
+          }
+        } catch (error) {
+          logDebug(`Error updating buttons: ${error.message}`);
+        }
+      }
+
+      // Update analog sticks
+      function updateAnalogSticks(axes) {
+        if (!axes || axes.length === 0) {
+          return;
+        }
+
+        // Left stick (axes 0 and 1) - 8-directional movement
+        if (axes.length >= 2) {
+          const leftX = axes[0];
+          const leftY = axes[1];
+
+          leftStickElement.style.transform = `translate(calc(-50% + ${leftX * 50}px), calc(-50% + ${leftY * 50}px))`;
+          leftXElement.textContent = leftX.toFixed(2);
+          leftYElement.textContent = leftY.toFixed(2);
+
+          // Determine movement direction based on stick position
+          let newMovement = 'stop';
+
+          if (Math.abs(leftX) > STICK_THRESHOLD || Math.abs(leftY) > STICK_THRESHOLD) {
+            // Calculate angle in degrees (0 is right, 90 is down, 180 is left, 270 is up)
+            const angle = Math.atan2(leftY, leftX) * (180 / Math.PI);
+
+            // Map angle to 8 directions
+            if (angle >= -22.5 && angle < 22.5) {
+              newMovement = 'right';
+            } else if (angle >= 22.5 && angle < 67.5) {
+              newMovement = 'rightdown';
+            } else if (angle >= 67.5 && angle < 112.5) {
+              newMovement = 'back';
+            } else if (angle >= 112.5 && angle < 157.5) {
+              newMovement = 'leftdown';
+            } else if (angle >= 157.5 || angle < -157.5) {
+              newMovement = 'left';
+            } else if (angle >= -157.5 && angle < -112.5) {
+              newMovement = 'leftup';
+            } else if (angle >= -112.5 && angle < -67.5) {
+              newMovement = 'go';
+            } else if (angle >= -67.5 && angle < -22.5) {
+              newMovement = 'rightup';
+            }
+          }
+
+          // Only send command if movement has changed
+          if (newMovement !== currentMovement) {
+            currentMovement = newMovement;
+            logDebug(`Left stick movement: ${currentMovement}`);
+            sendCommand(currentMovement);
+          }
+        }
+
+        // Right stick (axes 2 and 3) - Rotation control
+        if (axes.length >= 4) {
+          const rightX = axes[2];
+          const rightY = axes[3];
+
+          rightStickElement.style.transform = `translate(calc(-50% + ${rightX * 50}px), calc(-50% + ${rightY * 50}px))`;
+          rightXElement.textContent = rightX.toFixed(2);
+          rightYElement.textContent = rightY.toFixed(2);
+
+          // Determine rotation based on right stick X axis
+          let newRotation = 'stop';
+
+          if (Math.abs(rightX) > STICK_THRESHOLD) {
+            if (rightX > 0) {
+              newRotation = 'clockwise';
+            } else {
+              newRotation = 'contrario';
+            }
+          }
+
+          // Only send command if rotation has changed
+          if (newRotation !== currentRotation) {
+            currentRotation = newRotation;
+            logDebug(`Right stick rotation: ${currentRotation}`);
+            sendCommand(currentRotation);
+          }
+        }
+      }
+
+      // Update controller info
+      function updateControllerInfo() {
+        if (gamepad) {
+          controllerNameElement.textContent = gamepad.id;
+          controllerIdElement.textContent = `ID: ${gamepad.index}`;
+          controllerTimestampElement.textContent = `Timestamp: ${gamepad.timestamp}`;
+          controllerMappingElement.textContent = `Mapping: ${gamepad.mapping || 'standard'}`;
+          controllerConnectedElement.textContent = `Connected: ${gamepad.connected ? 'Yes' : 'No'}`;
+          controllerButtonsCountElement.textContent = `Buttons: ${gamepad.buttons.length}`;
+          controllerAxesCountElement.textContent = `Axes: ${gamepad.axes.length}`;
+        }
+      }
+
+      // Game loop
+      function gameLoop() {
+        try {
+          // Get the latest gamepad state directly
+          const gamepads = navigator.getGamepads();
+          const currentGamepad = gamepads[0]; // Focus on first gamepad
+
+          if (currentGamepad) {
+            if (!gamepad || gamepad.index !== currentGamepad.index) {
+              logDebug(`New gamepad detected: ${currentGamepad.id}`);
+              logDebug(`Number of buttons: ${currentGamepad.buttons.length}`);
+              logDebug(`Number of axes: ${currentGamepad.axes.length}`);
+              logDebug('Button mappings:');
+              Object.entries(buttonMappings).forEach(([button, command]) => {
+                logDebug(`${button} -> ${command}`);
+              });
+              gamepad = currentGamepad;
+              updateControllerInfo();
+            }
+
+            // Always update the reference
+            gamepad = currentGamepad;
+
+            // Update UI
+            updateButtons(gamepad.buttons);
+            updateAnalogSticks(gamepad.axes);
+
+            // Log polling every 100 frames
+            pollCount++;
+            if (pollCount % 100 === 0) {
+              logDebug(`Still polling (count: ${pollCount}), Gamepad connected: ${gamepad.connected}`);
+            }
+
+            statusElement.textContent = `Controller: Connected (${gamepad.id})`;
+            statusElement.className = 'status connected';
+          } else if (gamepad) {
+            logDebug('Gamepad disconnected');
+            gamepad = null;
+            statusElement.textContent = 'Controller: Disconnected';
+            statusElement.className = 'status disconnected';
+          }
+        } catch (error) {
+          logDebug(`Error in gameLoop: ${error.message}`);
+        }
+
+        // Request next frame
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+
+      // Add a legend for mapped buttons
+      function addButtonLegend() {
+        const legendDiv = document.createElement('div');
+        legendDiv.style.marginTop = '20px';
+        legendDiv.style.padding = '10px';
+        legendDiv.style.backgroundColor = '#f8f9fa';
+        legendDiv.style.borderRadius = '5px';
+
+        const legendTitle = document.createElement('h3');
+        legendTitle.textContent = 'Controller Mappings';
+        legendDiv.appendChild(legendTitle);
+
+        const mappingsList = document.createElement('ul');
+        mappingsList.style.listStyle = 'none';
+        mappingsList.style.padding = '0';
+
+        // Add button mappings
+        const buttonMappingsTitle = document.createElement('h4');
+        buttonMappingsTitle.textContent = 'Button Mappings';
+        mappingsList.appendChild(buttonMappingsTitle);
+
+        Object.entries(buttonMappings).forEach(([button, command]) => {
+          const listItem = document.createElement('li');
+          listItem.style.margin = '5px 0';
+          listItem.textContent = `${button} -> ${command}`;
+          mappingsList.appendChild(listItem);
+        });
+
+        // Add analog stick mappings
+        const stickMappingsTitle = document.createElement('h4');
+        stickMappingsTitle.textContent = 'Analog Stick Mappings';
+        stickMappingsTitle.style.marginTop = '15px';
+        mappingsList.appendChild(stickMappingsTitle);
+
+        const leftStickItem = document.createElement('li');
+        leftStickItem.style.margin = '5px 0';
+        leftStickItem.textContent = 'Left Stick -> 8-directional movement (Forward, Backward, Left, Right, and diagonals)';
+        mappingsList.appendChild(leftStickItem);
+
+        const rightStickItem = document.createElement('li');
+        rightStickItem.style.margin = '5px 0';
+        rightStickItem.textContent = 'Right Stick -> Rotation (Left = Counterclockwise, Right = Clockwise)';
+        mappingsList.appendChild(rightStickItem);
+
+        legendDiv.appendChild(mappingsList);
+        document.querySelector('.container').insertBefore(legendDiv, document.querySelector('.debug-info'));
+      }
+
+      // Event listeners
+      window.addEventListener('gamepadconnected', (e) => {
+        logDebug(`Gamepad connected event: ${e.gamepad.id} (index: ${e.gamepad.index})`);
+        logDebug(`Mapping: ${e.gamepad.mapping}`);
+        logDebug(`Buttons: ${e.gamepad.buttons.length}, Axes: ${e.gamepad.axes.length}`);
+
+        // Start polling immediately
+        gamepad = e.gamepad;
+        lastTimestamp = e.gamepad.timestamp;
+        statusElement.textContent = `Controller: Connected (${e.gamepad.id})`;
+        statusElement.className = 'status connected';
+
+        // Force an immediate update
+        updateControllerInfo();
+        updateButtons(gamepad.buttons);
+        updateAnalogSticks(gamepad.axes);
+      });
+
+      window.addEventListener('gamepaddisconnected', (e) => {
+        logDebug(`Gamepad disconnected event: ${e.gamepad.id} (index: ${e.gamepad.index})`);
+        if (gamepad && gamepad.index === e.gamepad.index) {
+          gamepad = null;
+          statusElement.textContent = 'Controller: Disconnected';
+          statusElement.className = 'status disconnected';
+        }
+      });
+
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        logDebug('Page unloading - cleaning up');
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      });
+
+      // Initialize
+      logDebug('Initializing gamepad controller page');
+      initButtonGrid();
+      addButtonLegend();
+
+      // Start the game loop
+      gameLoop();
+    });
   </script>
 </body>
 </html>
@@ -694,4 +1187,682 @@ esp_err_t WebServer::streamHandler(httpd_req_t *req)
 
   Serial.println("Stream ended");
   return res;
+}
+
+// Gamepad handler implementation
+esp_err_t WebServer::gamepadHandler(httpd_req_t *req)
+{
+  static const char PROGMEM GAMEPAD_HTML[] = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32-CAM Gamepad Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0 auto;
+      padding: 20px;
+      max-width: 800px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .gamepad-info {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .button {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f8f9fa;
+    }
+    .button.pressed {
+      background-color: #007bff;
+      color: white;
+    }
+    .analog-stick {
+      width: 150px;
+      height: 150px;
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      position: relative;
+      margin: 20px auto;
+    }
+    .stick {
+      width: 20px;
+      height: 20px;
+      background-color: #007bff;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .axis-labels {
+      display: flex;
+      justify-content: space-between;
+      width: 150px;
+      margin: 0 auto;
+    }
+    .axis-value {
+      font-family: monospace;
+      margin-top: 5px;
+    }
+    .nav-link {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 10px;
+      font-weight: bold;
+    }
+    .debug-info {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      text-align: left;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin: 20px auto;
+    }
+    .video-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .fullscreen-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    .fullscreen-btn:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ESP32-CAM Gamepad Controller</h1>
+    <a href="/" class="nav-link">Back to Robot Control</a>
+
+    <div class="video-container">
+      <img src="" id="photo">
+      <button class="fullscreen-btn" onclick="toggleFullscreen()">Fullscreen</button>
+    </div>
+
+    <div id="status" class="status disconnected">
+      Controller: Disconnected
+    </div>
+
+    <div id="gamepad-info" class="gamepad-info">
+      <div>
+        <h3>Controller Info</h3>
+        <p id="controller-name">No controller connected</p>
+        <p id="controller-id">ID: -</p>
+        <p id="controller-timestamp">Timestamp: -</p>
+        <p id="controller-mapping">Mapping: -</p>
+        <p id="controller-connected">Connected: -</p>
+        <p id="controller-buttons-count">Buttons: -</p>
+        <p id="controller-axes-count">Axes: -</p>
+      </div>
+    </div>
+
+    <div class="button-grid" id="button-grid">
+      <!-- Buttons will be dynamically added here -->
+    </div>
+
+    <div class="analog-sticks">
+      <div>
+        <h3>Left Stick</h3>
+        <div class="analog-stick">
+          <div class="stick" id="left-stick"></div>
+        </div>
+        <div class="axis-labels">
+          <span>X: <span id="left-x" class="axis-value">0.00</span></span>
+          <span>Y: <span id="left-y" class="axis-value">0.00</span></span>
+        </div>
+      </div>
+
+      <div>
+        <h3>Right Stick</h3>
+        <div class="analog-stick">
+          <div class="stick" id="right-stick"></div>
+        </div>
+        <div class="axis-labels">
+          <span>X: <span id="right-x" class="axis-value">0.00</span></span>
+          <span>Y: <span id="right-y" class="axis-value">0.00</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="debug-info" id="debug-info">
+      <h3>Debug Information</h3>
+      <div id="debug-content"></div>
+    </div>
+  </div>
+
+  <script>
+    // Global functions for button handlers
+    function toggleCheckbox(command) {
+      fetch('/' + command)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function toggleFullscreen() {
+      const videoContainer = document.querySelector('.video-container');
+      if (!document.fullscreenElement) {
+        videoContainer.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Initialize everything when the page loads
+    window.addEventListener('DOMContentLoaded', function() {
+      // Camera stream
+      const photo = document.getElementById('photo');
+      photo.src = 'http://' + window.location.hostname + ':81/stream';
+
+      // Gamepad state
+      let gamepad = null;
+      let buttonElements = [];
+      let buttonStates = [];
+      let debugContent = document.getElementById('debug-content');
+      let lastTimestamp = 0;
+      let pollCount = 0;
+      let lastPollTime = 0;
+      let animationFrameId = null;
+
+      // DOM elements
+      const statusElement = document.getElementById('status');
+      const controllerNameElement = document.getElementById('controller-name');
+      const controllerIdElement = document.getElementById('controller-id');
+      const controllerTimestampElement = document.getElementById('controller-timestamp');
+      const controllerMappingElement = document.getElementById('controller-mapping');
+      const controllerConnectedElement = document.getElementById('controller-connected');
+      const controllerButtonsCountElement = document.getElementById('controller-buttons-count');
+      const controllerAxesCountElement = document.getElementById('controller-axes-count');
+      const buttonGridElement = document.getElementById('button-grid');
+      const leftStickElement = document.getElementById('left-stick');
+      const rightStickElement = document.getElementById('right-stick');
+      const leftXElement = document.getElementById('left-x');
+      const leftYElement = document.getElementById('left-y');
+      const rightXElement = document.getElementById('right-x');
+      const rightYElement = document.getElementById('right-y');
+
+      // Button names for PS5 DualSense with mapped actions
+      const buttonNames = [
+        'Cross', 'Circle', 'Square', 'Triangle',
+        'L1', 'R1', 'L2', 'R2',
+        'Share', 'Options', 'L3', 'R3',
+        'Up', 'Down', 'Left', 'Right',
+        'PS', 'Touch Pad'
+      ];
+
+      // Button mapping for robot controls
+      const buttonMappings = {
+        'Up': 'go',           // Up
+        'Down': 'back',       // Down
+        'Left': 'left',       // Left
+        'Right': 'right',     // Right
+        'L1': 'motorleft',    // L1 for MotorLeft
+        'R1': 'motorright',   // R1 for MotorRight
+        'Cross': 'model1',    // Cross for Model1
+        'Square': 'model2',   // Square for Model2
+        'Triangle': 'model3', // Triangle for Model3
+        'Circle': 'model4',   // Circle for Model4
+        'R3': 'ledtoggle',    // R3 for LED toggle
+        'Touch Pad': 'stop'   // Touch Pad for Stop
+      };
+
+      // Threshold for analog stick movement
+      const STICK_THRESHOLD = 0.3;
+
+      // Current movement state
+      let currentMovement = 'stop';
+      let currentRotation = 'stop';
+      let ledState = false;
+
+      // Log debug information
+      function logDebug(message) {
+        const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+        const logLine = document.createElement('div');
+        logLine.textContent = `[${timestamp}] ${message}`;
+        debugContent.appendChild(logLine);
+        debugContent.scrollTop = debugContent.scrollHeight;
+      }
+
+      // Initialize button grid
+      function initButtonGrid() {
+        try {
+          buttonGridElement.innerHTML = '';
+          buttonElements = [];
+          buttonStates = [];
+
+          // Initialize with a minimum set of buttons
+          const initialButtonCount = 20; // Set higher than expected button count
+
+          for (let i = 0; i < initialButtonCount; i++) {
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'button';
+            buttonDiv.id = `button-${i}`;
+            buttonDiv.textContent = buttonNames[i] || `Button ${i}`;
+
+            // Add visual indicator for mapped buttons
+            const buttonName = buttonNames[i] || `Button ${i}`;
+            if (buttonMappings[buttonName]) {
+              buttonDiv.style.backgroundColor = '#4CAF50';
+              buttonDiv.style.color = 'white';
+            }
+
+            buttonGridElement.appendChild(buttonDiv);
+            buttonElements.push(buttonDiv);
+            buttonStates.push(false);
+          }
+
+          logDebug(`Initialized button grid with ${initialButtonCount} buttons`);
+        } catch (error) {
+          logDebug(`Error initializing button grid: ${error.message}`);
+        }
+      }
+
+      // Function to send commands to the robot
+      function sendCommand(command) {
+        fetch(`/${command}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(text => {
+            logDebug(`Command ${command} sent successfully`);
+          })
+          .catch(error => {
+            logDebug(`Error sending command ${command}: ${error.message}`);
+          });
+      }
+
+      // Update button states
+      function updateButtons(buttons) {
+        if (!buttons || buttons.length === 0) {
+          return;
+        }
+
+        try {
+          for (let i = 0; i < buttons.length; i++) {
+            const buttonElement = buttonElements[i];
+            if (!buttonElement) {
+              // If we don't have an element for this button index, create one
+              const buttonDiv = document.createElement('div');
+              buttonDiv.className = 'button';
+              buttonDiv.id = `button-${i}`;
+              buttonDiv.textContent = buttonNames[i] || `Button ${i}`;
+
+              // Add visual indicator for mapped buttons
+              const buttonName = buttonNames[i] || `Button ${i}`;
+              if (buttonMappings[buttonName]) {
+                buttonDiv.style.backgroundColor = '#4CAF50';
+                buttonDiv.style.color = 'white';
+              }
+
+              buttonGridElement.appendChild(buttonDiv);
+              buttonElements[i] = buttonDiv;
+              buttonStates[i] = false;
+              logDebug(`Created new button element for index ${i}`);
+            }
+
+            const isPressed = buttons[i].pressed || buttons[i].value > 0.5;
+            if (isPressed !== buttonStates[i]) {
+              buttonStates[i] = isPressed;
+              const buttonName = buttonNames[i] || `Button ${i}`;
+
+              // Update button appearance
+              if (buttonMappings[buttonName]) {
+                // Mapped buttons use a different color scheme
+                buttonElement.style.backgroundColor = isPressed ? '#45a049' : '#4CAF50';
+                buttonElement.style.color = 'white';
+              } else {
+                // Regular buttons use the default color scheme
+                buttonElement.classList.toggle('pressed', isPressed);
+              }
+
+              // Log button state
+              logDebug(`Button ${i} (${buttonName}): ${isPressed ? 'Pressed' : 'Released'}`);
+
+              // Handle mapped buttons
+              if (buttonMappings[buttonName]) {
+                // Special handling for L1/R1 - stop when released
+                if ((buttonName === 'L1' || buttonName === 'R1') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for directional buttons - stop when released
+                else if ((buttonName === 'Up' || buttonName === 'Down' ||
+                         buttonName === 'Left' || buttonName === 'Right') && !isPressed) {
+                  logDebug(`Sending command: stop (${buttonName} released)`);
+                  sendCommand('stop');
+                }
+                // Special handling for R3 - toggle LED
+                else if (buttonName === 'R3' && isPressed) {
+                  ledState = !ledState;
+                  const command = ledState ? 'ledon' : 'ledoff';
+                  logDebug(`Sending command: ${command} (LED ${ledState ? 'ON' : 'OFF'})`);
+                  sendCommand(command);
+                }
+                // Handle other buttons
+                else if (isPressed) {
+                  // Send command to robot
+                  const command = buttonMappings[buttonName];
+                  logDebug(`Sending command: ${command}`);
+                  sendCommand(command);
+                }
+              }
+
+              // Special handling for L2/R2 triggers
+              if ((buttonName.includes('L2') || buttonName.includes('R2')) && buttons[i].value) {
+                const value = buttons[i].value;
+                logDebug(`${buttonName} pressure: ${(value * 100).toFixed(0)}%`);
+              }
+            }
+          }
+        } catch (error) {
+          logDebug(`Error updating buttons: ${error.message}`);
+        }
+      }
+
+      // Update analog sticks
+      function updateAnalogSticks(axes) {
+        if (!axes || axes.length === 0) {
+          return;
+        }
+
+        // Left stick (axes 0 and 1) - 8-directional movement
+        if (axes.length >= 2) {
+          const leftX = axes[0];
+          const leftY = axes[1];
+
+          leftStickElement.style.transform = `translate(calc(-50% + ${leftX * 50}px), calc(-50% + ${leftY * 50}px))`;
+          leftXElement.textContent = leftX.toFixed(2);
+          leftYElement.textContent = leftY.toFixed(2);
+
+          // Determine movement direction based on stick position
+          let newMovement = 'stop';
+
+          if (Math.abs(leftX) > STICK_THRESHOLD || Math.abs(leftY) > STICK_THRESHOLD) {
+            // Calculate angle in degrees (0 is right, 90 is down, 180 is left, 270 is up)
+            const angle = Math.atan2(leftY, leftX) * (180 / Math.PI);
+
+            // Map angle to 8 directions
+            if (angle >= -22.5 && angle < 22.5) {
+              newMovement = 'right';
+            } else if (angle >= 22.5 && angle < 67.5) {
+              newMovement = 'rightdown';
+            } else if (angle >= 67.5 && angle < 112.5) {
+              newMovement = 'back';
+            } else if (angle >= 112.5 && angle < 157.5) {
+              newMovement = 'leftdown';
+            } else if (angle >= 157.5 || angle < -157.5) {
+              newMovement = 'left';
+            } else if (angle >= -157.5 && angle < -112.5) {
+              newMovement = 'leftup';
+            } else if (angle >= -112.5 && angle < -67.5) {
+              newMovement = 'go';
+            } else if (angle >= -67.5 && angle < -22.5) {
+              newMovement = 'rightup';
+            }
+          }
+
+          // Only send command if movement has changed
+          if (newMovement !== currentMovement) {
+            currentMovement = newMovement;
+            logDebug(`Left stick movement: ${currentMovement}`);
+            sendCommand(currentMovement);
+          }
+        }
+
+        // Right stick (axes 2 and 3) - Rotation control
+        if (axes.length >= 4) {
+          const rightX = axes[2];
+          const rightY = axes[3];
+
+          rightStickElement.style.transform = `translate(calc(-50% + ${rightX * 50}px), calc(-50% + ${rightY * 50}px))`;
+          rightXElement.textContent = rightX.toFixed(2);
+          rightYElement.textContent = rightY.toFixed(2);
+
+          // Determine rotation based on right stick X axis
+          let newRotation = 'stop';
+
+          if (Math.abs(rightX) > STICK_THRESHOLD) {
+            if (rightX > 0) {
+              newRotation = 'clockwise';
+            } else {
+              newRotation = 'contrario';
+            }
+          }
+
+          // Only send command if rotation has changed
+          if (newRotation !== currentRotation) {
+            currentRotation = newRotation;
+            logDebug(`Right stick rotation: ${currentRotation}`);
+            sendCommand(currentRotation);
+          }
+        }
+      }
+
+      // Update controller info
+      function updateControllerInfo() {
+        if (gamepad) {
+          controllerNameElement.textContent = gamepad.id;
+          controllerIdElement.textContent = `ID: ${gamepad.index}`;
+          controllerTimestampElement.textContent = `Timestamp: ${gamepad.timestamp}`;
+          controllerMappingElement.textContent = `Mapping: ${gamepad.mapping || 'standard'}`;
+          controllerConnectedElement.textContent = `Connected: ${gamepad.connected ? 'Yes' : 'No'}`;
+          controllerButtonsCountElement.textContent = `Buttons: ${gamepad.buttons.length}`;
+          controllerAxesCountElement.textContent = `Axes: ${gamepad.axes.length}`;
+        }
+      }
+
+      // Game loop
+      function gameLoop() {
+        try {
+          // Get the latest gamepad state directly
+          const gamepads = navigator.getGamepads();
+          const currentGamepad = gamepads[0]; // Focus on first gamepad
+
+          if (currentGamepad) {
+            if (!gamepad || gamepad.index !== currentGamepad.index) {
+              logDebug(`New gamepad detected: ${currentGamepad.id}`);
+              logDebug(`Number of buttons: ${currentGamepad.buttons.length}`);
+              logDebug(`Number of axes: ${currentGamepad.axes.length}`);
+              logDebug('Button mappings:');
+              Object.entries(buttonMappings).forEach(([button, command]) => {
+                logDebug(`${button} -> ${command}`);
+              });
+              gamepad = currentGamepad;
+              updateControllerInfo();
+            }
+
+            // Always update the reference
+            gamepad = currentGamepad;
+
+            // Update UI
+            updateButtons(gamepad.buttons);
+            updateAnalogSticks(gamepad.axes);
+
+            // Log polling every 100 frames
+            pollCount++;
+            if (pollCount % 100 === 0) {
+              logDebug(`Still polling (count: ${pollCount}), Gamepad connected: ${gamepad.connected}`);
+            }
+
+            statusElement.textContent = `Controller: Connected (${gamepad.id})`;
+            statusElement.className = 'status connected';
+          } else if (gamepad) {
+            logDebug('Gamepad disconnected');
+            gamepad = null;
+            statusElement.textContent = 'Controller: Disconnected';
+            statusElement.className = 'status disconnected';
+          }
+        } catch (error) {
+          logDebug(`Error in gameLoop: ${error.message}`);
+        }
+
+        // Request next frame
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+
+      // Add a legend for mapped buttons
+      function addButtonLegend() {
+        const legendDiv = document.createElement('div');
+        legendDiv.style.marginTop = '20px';
+        legendDiv.style.padding = '10px';
+        legendDiv.style.backgroundColor = '#f8f9fa';
+        legendDiv.style.borderRadius = '5px';
+
+        const legendTitle = document.createElement('h3');
+        legendTitle.textContent = 'Controller Mappings';
+        legendDiv.appendChild(legendTitle);
+
+        const mappingsList = document.createElement('ul');
+        mappingsList.style.listStyle = 'none';
+        mappingsList.style.padding = '0';
+
+        // Add button mappings
+        const buttonMappingsTitle = document.createElement('h4');
+        buttonMappingsTitle.textContent = 'Button Mappings';
+        mappingsList.appendChild(buttonMappingsTitle);
+
+        Object.entries(buttonMappings).forEach(([button, command]) => {
+          const listItem = document.createElement('li');
+          listItem.style.margin = '5px 0';
+          listItem.textContent = `${button} -> ${command}`;
+          mappingsList.appendChild(listItem);
+        });
+
+        // Add analog stick mappings
+        const stickMappingsTitle = document.createElement('h4');
+        stickMappingsTitle.textContent = 'Analog Stick Mappings';
+        stickMappingsTitle.style.marginTop = '15px';
+        mappingsList.appendChild(stickMappingsTitle);
+
+        const leftStickItem = document.createElement('li');
+        leftStickItem.style.margin = '5px 0';
+        leftStickItem.textContent = 'Left Stick -> 8-directional movement (Forward, Backward, Left, Right, and diagonals)';
+        mappingsList.appendChild(leftStickItem);
+
+        const rightStickItem = document.createElement('li');
+        rightStickItem.style.margin = '5px 0';
+        rightStickItem.textContent = 'Right Stick -> Rotation (Left = Counterclockwise, Right = Clockwise)';
+        mappingsList.appendChild(rightStickItem);
+
+        legendDiv.appendChild(mappingsList);
+        document.querySelector('.container').insertBefore(legendDiv, document.querySelector('.debug-info'));
+      }
+
+      // Event listeners
+      window.addEventListener('gamepadconnected', (e) => {
+        logDebug(`Gamepad connected event: ${e.gamepad.id} (index: ${e.gamepad.index})`);
+        logDebug(`Mapping: ${e.gamepad.mapping}`);
+        logDebug(`Buttons: ${e.gamepad.buttons.length}, Axes: ${e.gamepad.axes.length}`);
+
+        // Start polling immediately
+        gamepad = e.gamepad;
+        lastTimestamp = e.gamepad.timestamp;
+        statusElement.textContent = `Controller: Connected (${e.gamepad.id})`;
+        statusElement.className = 'status connected';
+
+        // Force an immediate update
+        updateControllerInfo();
+        updateButtons(gamepad.buttons);
+        updateAnalogSticks(gamepad.axes);
+      });
+
+      window.addEventListener('gamepaddisconnected', (e) => {
+        logDebug(`Gamepad disconnected event: ${e.gamepad.id} (index: ${e.gamepad.index})`);
+        if (gamepad && gamepad.index === e.gamepad.index) {
+          gamepad = null;
+          statusElement.textContent = 'Controller: Disconnected';
+          statusElement.className = 'status disconnected';
+        }
+      });
+
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        logDebug('Page unloading - cleaning up');
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      });
+
+      // Initialize
+      logDebug('Initializing gamepad controller page');
+      initButtonGrid();
+      addButtonLegend();
+
+      // Start the game loop
+      gameLoop();
+    });
+  </script>
+</body>
+</html>
+)rawliteral";
+
+  httpd_resp_set_type(req, "text/html");
+  return httpd_resp_send(req, GAMEPAD_HTML, strlen(GAMEPAD_HTML));
 }
